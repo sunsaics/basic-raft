@@ -10,6 +10,12 @@ import xyz.imcoder.raft.core.message.VoteResponseMessage;
 import xyz.imcoder.raft.core.rpc.RpcClient;
 import xyz.imcoder.raft.core.rpc.RpcResponse;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -99,13 +105,19 @@ public class ServerNode implements MessageHandler, TimeoutEventHandler {
             // 选举自己
             if (changeToCandidate()) {
                 int winVoteCount = 1;
+                List<Future<VoteResponseMessage>> responseFutures = new ArrayList<>(serverInfos.length);
                 for (ServerInfo serverInfo: serverInfos) {
-                    Object response = rpcClient.vote(serverInfo, new Object());
-                    if ( true ) {
-                        winVoteCount = winVoteCount + 1;
-                    }
-                    if (winVoteCount > (serverInfos.length + 1) / 2 ) {
-                        onChangeStatus(Status.LEADER, status);
+                    Future<VoteResponseMessage> response = rpcClient.vote(serverInfo, new VoteRequestMessage());
+                    responseFutures.add(response);
+                }
+                long afterSendVote = System.currentTimeMillis();
+
+                while (true) {
+
+                    for (Future future: responseFutures) {
+                        if (future.isDone()) {
+
+                        }
                     }
                 }
             }

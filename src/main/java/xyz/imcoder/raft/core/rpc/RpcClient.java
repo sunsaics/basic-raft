@@ -1,6 +1,10 @@
 package xyz.imcoder.raft.core.rpc;
 
+import xyz.imcoder.raft.core.message.VoteRequestMessage;
+import xyz.imcoder.raft.core.message.VoteResponseMessage;
 import xyz.imcoder.raft.core.server.ServerInfo;
+
+import java.util.concurrent.Future;
 
 /**
  * @Author sunsai
@@ -9,7 +13,7 @@ import xyz.imcoder.raft.core.server.ServerInfo;
 public interface RpcClient {
     Object heartBeat(ServerInfo serverInfo, Object message);
 
-    Object vote(ServerInfo serverInfo, Object vote);
+    Future<VoteResponseMessage> vote(ServerInfo serverInfo, VoteRequestMessage message);
 
     Object copy(ServerInfo serverInfo, Object object);
 
