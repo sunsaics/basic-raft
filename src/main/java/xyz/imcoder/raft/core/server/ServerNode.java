@@ -5,8 +5,12 @@ import xyz.imcoder.raft.core.config.ServerConfig;
 import xyz.imcoder.raft.core.handler.MessageHandler;
 import xyz.imcoder.raft.core.handler.TimeoutEventHandler;
 import xyz.imcoder.raft.core.log.Log;
+import xyz.imcoder.raft.core.message.VoteRequestMessage;
+import xyz.imcoder.raft.core.message.VoteResponseMessage;
 import xyz.imcoder.raft.core.rpc.RpcClient;
 import xyz.imcoder.raft.core.rpc.RpcResponse;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @Author sunsai
@@ -16,7 +20,7 @@ public class ServerNode implements MessageHandler, TimeoutEventHandler {
 
     private long currentTerm;
 
-    private long voteFor;
+    private AtomicInteger voteFor = new AtomicInteger(0);
 
     private Log[] logs;
 
@@ -36,7 +40,7 @@ public class ServerNode implements MessageHandler, TimeoutEventHandler {
 
     private ServerConfig config;
 
-    private long selfNodeId;
+    private int selfNodeId;
 
     private ServerInfo selfServerInfo;
 
@@ -52,36 +56,82 @@ public class ServerNode implements MessageHandler, TimeoutEventHandler {
 
     }
 
+    @Override
     public RpcResponse onCopyMessage(ServerInfo fromServerInfo, Object object) {
 
         return null;
     }
 
-    public RpcResponse onVoteMessage(ServerInfo fromServerInfo, Object object) {
-        return null;
+    @Override
+    public VoteResponseMessage onVoteMessage(ServerInfo fromServerInfo, VoteRequestMessage voteMessage) {
+        // 如果自己的选票还没有投出，则可以投票
+        VoteResponseMessage response = new VoteResponseMessage();
+        response.setTerm(currentTerm);
+        if (checkCanVoteFor(voteMessage)) {
+            //
+            response.setWimVote(true);
+        } else {
+            response.setWimVote(false);
+        }
+        return response;
     }
 
+    private boolean checkCanVoteFor(VoteRequestMessage voteMessage) {
+        return false;
+    }
+
+
+    @Override
     public RpcResponse onPreVoteMessage(ServerInfo fromServerInfo, Object object) {
         return null;
     }
 
+    @Override
     public RpcResponse onCommitMessage(ServerInfo fromServerInfo, Object message) {
         return null;
     }
 
+    @Override
     public void onHeartbeatTimeoutCheck() {
         long now = System.currentTimeMillis();
         boolean isTimeout = (now - lastReceiveLeaderHeartbeatTime) > config.getHeartbeatTimeout();
         if (isTimeout) {
             // 选举自己
-            status = Status.CANDIDATE;
-            voteFor = selfNodeId;
-            for (ServerInfo serverInfo: serverInfos) {
-                Object response = rpcClient.vote(serverInfo, new Object());
+            if (changeToCandidate()) {
+                int winVoteCount = 1;
+                for (ServerInfo serverInfo: serverInfos) {
+                    Object response = rpcClient.vote(serverInfo, new Object());
+                    if ( true ) {
+                        winVoteCount = winVoteCount + 1;
+                    }
+                    if (winVoteCount > (serverInfos.length + 1) / 2 ) {
+                        onChangeStatus(Status.LEADER, status);
+                    }
+                }
             }
         }
     }
 
+    private boolean changeToCandidate() {
+        if (voteFor.compareAndSet(0, selfNodeId)) {
+            onChangeStatus(Status.CANDIDATE, status);
+            return true;
+        }
+        return false;
+    }
+
+    private void onChangeStatus(Status newStatus, Status oldStatus) {
+        status = newStatus;
+        if (status == Status.FOLLOWER) {
+
+        } else if (status == Status.CANDIDATE) {
+
+        } else if (status == Status.LEADER) {
+
+        }
+    }
+
+    @Override
     public void onSendHeartbeatCheck() {
         if (status != Status.LEADER) {
             return;
