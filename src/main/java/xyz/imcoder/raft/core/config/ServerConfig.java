@@ -8,10 +8,12 @@ public class ServerConfig {
 
     private long heartbeatTimeout = 500;
 
+    private long voteTimeout = 1000;
 
 
-
-
+    public long getVoteTimeout() {
+        return voteTimeout;
+    }
 
     public long getHeartbeatTimeout() {
         return heartbeatTimeout;
