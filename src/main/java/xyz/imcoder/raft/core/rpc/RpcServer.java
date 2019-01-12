@@ -12,4 +12,6 @@ import java.util.List;
  **/
 public interface RpcServer {
     Object listen(ServerConfig config, List<ServerInfo> allServerList, MessageHandler messageHandler);
+
+
 }
