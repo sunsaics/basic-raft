@@ -8,19 +8,16 @@ public class VoteResponseMessage implements Message {
     private long term;
     private boolean wimVote;
 
+    public VoteResponseMessage(long term, boolean isWinVote) {
+        this.term = term;
+        this.wimVote = isWinVote;
+    }
+
     public boolean isWimVote() {
         return wimVote;
     }
 
     public long getTerm() {
         return term;
-    }
-
-    public void setTerm(long term) {
-        this.term = term;
-    }
-
-    public void setWimVote(boolean wimVote) {
-        this.wimVote = wimVote;
     }
 }

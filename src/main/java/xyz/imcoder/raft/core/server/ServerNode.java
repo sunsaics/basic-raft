@@ -13,6 +13,7 @@ import xyz.imcoder.raft.core.rpc.RpcClient;
 import xyz.imcoder.raft.core.rpc.RpcResponse;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -23,19 +24,19 @@ import java.util.stream.Collectors;
  **/
 public class ServerNode implements MessageHandler, TimeEventHandler {
 
-    private long currentTerm;
+    private long currentTerm = 0;
 
     private AtomicInteger voteFor = new AtomicInteger(0);
 
     private Log[] logs;
 
-    private long commitIndex;
+    private long commitIndex = 0;
 
     private long lastApplied = 0;
 
-    private long[] nextIndex;
+    private Map<Integer, Long> nextIndex;
 
-    private long[] matchIndex;
+    private Map<Integer, Long> matchIndex;
 
     private Status status = Status.FOLLOWER;
 
@@ -57,6 +58,8 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
         this.serverInfos = clusterServerInfoList;
         clusterServerMap = serverInfos.stream().collect(Collectors.toMap(ServerInfo::getServerNodeId, x->x));
         selfServerInfo = config.getSelfServerInfo();
+        nextIndex = new ConcurrentHashMap<>();
+        matchIndex = new ConcurrentHashMap<>();
     }
 
     public void start() {
@@ -72,19 +75,10 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
     @Override
     public VoteResponseMessage onVoteMessage(ServerInfo fromServerInfo, VoteRequestMessage voteMessage) {
         // 如果自己的选票还没有投出，则可以投票
-        VoteResponseMessage response = new VoteResponseMessage();
-        response.setTerm(currentTerm);
-        if (checkCanVoteFor(voteMessage)) {
-            //
-            response.setWimVote(true);
-        } else {
-            response.setWimVote(false);
-        }
-        return response;
+        return new VoteResponseMessage(currentTerm, checkCanVoteFor(voteMessage));
     }
 
     private boolean checkCanVoteFor(VoteRequestMessage voteMessage) {
-
         System.out.println("selfNodeId=" + selfServerInfo.getServerNodeId() + ", status=" + status + ", receiveCandidateId=" + voteMessage.getCandidateId() + ", voteFor=" + voteFor);
         if (status == Status.FOLLOWER && voteFor.compareAndSet(0, voteMessage.getCandidateId())) {
             return true;
@@ -110,6 +104,7 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
             onChangeStatus(Status.FOLLOWER, Status.CANDIDATE);
         } if (status == Status.FOLLOWER) {
             voteFor.set(0);
+            currentTerm = message.getTerm();
         }
         lastReceiveLeaderHeartbeatTime = System.currentTimeMillis();
         return new HeartBeatResponseMessage(currentTerm, true);
@@ -204,23 +199,9 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
 
         } else if (status == Status.LEADER) {
             voteFor.set(0);
-            sendHeartBeat();
+            currentTerm = currentTerm + 1;
+            sendHeartBeatMessage();
         }
-    }
-
-    private void sendHeartBeat() {
-        for (ServerInfo serverInfo : serverInfos) {
-            HeartBeatRequestMessage message = new HeartBeatRequestMessage();
-            message.setLeaderId(selfServerInfo.getServerNodeId());
-            message.setLeaderCommit(commitIndex);
-            message.setTerm(currentTerm);
-            try {
-                rpcClient.heartBeat( serverInfo, message);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
     }
 
     @Override
@@ -231,6 +212,10 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
             return;
         }
         // 如果是leader的话，才发送
+        sendHeartBeatMessage();
+    }
+
+    private void sendHeartBeatMessage() {
         for (ServerInfo serverInfo: serverInfos) {
             HeartBeatRequestMessage message = new HeartBeatRequestMessage();
             message.setTerm(currentTerm);
