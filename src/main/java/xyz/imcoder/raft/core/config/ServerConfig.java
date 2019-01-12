@@ -11,16 +11,15 @@ import java.util.List;
  **/
 public class ServerConfig {
 
-    private long heartbeatTimeout = 500;
+    private long heartbeatTimeout = 1000;
 
-    private long voteTimeout = 1000;
-
+    private long voteTimeout = 500;
 
     public int port;
 
     private int id;
 
-    private String clusterHosts = "192.168.1.1:1234@1,";
+    private String clusterHosts;
 
     public void setPort(int port) {
         this.port = port;

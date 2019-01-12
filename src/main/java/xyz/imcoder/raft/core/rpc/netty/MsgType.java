@@ -5,8 +5,12 @@ package xyz.imcoder.raft.core.rpc.netty;
  * @Date 2019/1/12 3:58 PM
  **/
 public enum MsgType {
-    UNKNOW(0, "unknow"),
-    HEARTBEAT(1, "心跳")
+    UNKNOWN(0, "unknown"),
+    HEARTBEAT(1, "心跳"),
+    PRE_VOTE(2, "prevote"),
+    VOTE(3, "vote"),
+    COPY(4, "COPY"),
+    COMMIT(5, "COMMIT")
     ;
 
     private int code;
@@ -22,7 +26,7 @@ public enum MsgType {
                 return type;
             }
         }
-        return UNKNOW;
+        return UNKNOWN;
     }
 
     public int getCode() {

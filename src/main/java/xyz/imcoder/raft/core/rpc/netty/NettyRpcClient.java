@@ -1,18 +1,12 @@
 package xyz.imcoder.raft.core.rpc.netty;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import xyz.imcoder.raft.core.message.HeartBeatRequestMessage;
+import xyz.imcoder.raft.core.message.HeartBeatResponseMessage;
 import xyz.imcoder.raft.core.message.VoteRequestMessage;
 import xyz.imcoder.raft.core.message.VoteResponseMessage;
 import xyz.imcoder.raft.core.rpc.RpcClient;
 import xyz.imcoder.raft.core.server.ServerInfo;
 
-import java.net.InetSocketAddress;
 import java.util.concurrent.Future;
 
 /**
@@ -21,17 +15,16 @@ import java.util.concurrent.Future;
  **/
 public class NettyRpcClient implements RpcClient {
 
-
-
+    private NettyClient nettyClient = new NettyClient();
 
     @Override
-    public Object heartBeat(ServerInfo serverInfo, Object message) {
-        return null;
+    public HeartBeatResponseMessage heartBeat(ServerInfo serverInfo, HeartBeatRequestMessage message) throws Exception {
+        return (HeartBeatResponseMessage) nettyClient.send(serverInfo.getHost(), serverInfo.getPort(), new RequestMsgWrapper(MsgType.HEARTBEAT, message)).get();
     }
 
     @Override
-    public Future<VoteResponseMessage> vote(ServerInfo serverInfo, VoteRequestMessage message) {
-        return null;
+    public Future<Object> vote(ServerInfo serverInfo, VoteRequestMessage message) throws Exception {
+        return nettyClient.send(serverInfo.getHost(), serverInfo.getPort(), new RequestMsgWrapper(MsgType.VOTE, message));
     }
 
     @Override

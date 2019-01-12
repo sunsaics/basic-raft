@@ -13,7 +13,6 @@ import xyz.imcoder.raft.core.rpc.RpcClient;
 import xyz.imcoder.raft.core.rpc.RpcResponse;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -45,8 +44,6 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
     private long lastReceiveLeaderHeartbeatTime = 0L;
 
     private ServerConfig config;
-
-    private int selfNodeId;
 
     private ServerInfo selfServerInfo;
 
@@ -87,6 +84,11 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
     }
 
     private boolean checkCanVoteFor(VoteRequestMessage voteMessage) {
+
+        System.out.println("selfNodeId=" + selfServerInfo.getServerNodeId() + ", status=" + status + ", receiveCandidateId=" + voteMessage.getCandidateId() + ", voteFor=" + voteFor);
+        if (status == Status.FOLLOWER && voteFor.compareAndSet(0, voteMessage.getCandidateId())) {
+            return true;
+        }
         return false;
     }
 
@@ -103,19 +105,19 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
 
     @Override
     public HeartBeatResponseMessage onHeartBeatMessage(ServerInfo leaderServerInfo, HeartBeatRequestMessage message) {
+        System.out.println("onHeartBeatMessage");
         if (status == Status.CANDIDATE) {
             onChangeStatus(Status.FOLLOWER, Status.CANDIDATE);
+        } if (status == Status.FOLLOWER) {
+            voteFor.set(0);
         }
-
         lastReceiveLeaderHeartbeatTime = System.currentTimeMillis();
-        HeartBeatResponseMessage response = new HeartBeatResponseMessage();
-        response.setSuccess(true);
-        response.setTerm(currentTerm);
-        return response;
+        return new HeartBeatResponseMessage(currentTerm, true);
     }
 
     @Override
     public void onHeartbeatTimeoutCheck() {
+        System.out.println("onHeartbeatTimeoutCheck");
         long now = System.currentTimeMillis();
         boolean isTimeout = (now - lastReceiveLeaderHeartbeatTime) > config.getHeartbeatTimeout();
         if (isTimeout && status == Status.FOLLOWER) {
@@ -127,28 +129,36 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
         // 选举自己
         if (changeToCandidate()) {
             int winVoteCount = 1;
-            List<Future<VoteResponseMessage>> responseFutures = new ArrayList<>(serverInfos.size());
+            List<Future<Object>> responseFutures = new ArrayList<>(serverInfos.size());
             for (ServerInfo serverInfo: serverInfos) {
-                Future<VoteResponseMessage> response = rpcClient.vote(serverInfo, new VoteRequestMessage(currentTerm + 1, selfServerInfo.getServerNodeId(), 1L,1L));
-                responseFutures.add(response);
+                Future<Object> response = null;
+                try {
+                    response = rpcClient.vote(serverInfo, new VoteRequestMessage(currentTerm + 1, selfServerInfo.getServerNodeId(), 1L,1L));
+                    responseFutures.add(response);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
             int winMinVoteCount = (serverInfos.size() + 1) / 2 + 1;
             long afterSendVote = System.currentTimeMillis();
 
             Set<VoteResponseMessage> alreadyVoteMessageSet = new HashSet<>();
             while (true) {
-
                 long current = System.currentTimeMillis();
                 if ((current - afterSendVote) > config.getVoteTimeout()) {
                     onChangeStatus(Status.FOLLOWER, Status.CANDIDATE);
                     break;
                 }
 
+                if (alreadyVoteMessageSet.size() == responseFutures.size()) {
+                    onChangeStatus(Status.FOLLOWER, Status.CANDIDATE);
+                    break;
+                }
                 // todo 这段代码写的不好，需要重构
-                for (Future<VoteResponseMessage> future: responseFutures) {
+                for (Future<Object> future: responseFutures) {
                     if (future.isDone()) {
                         try {
-                            VoteResponseMessage msg = future.get();
+                            VoteResponseMessage msg = (VoteResponseMessage) future.get();
                             if (!alreadyVoteMessageSet.contains(msg)) {
                                 alreadyVoteMessageSet.add(msg);
                                 if (msg.isWimVote()) {
@@ -159,9 +169,7 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
                                     }
                                 }
                             }
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        } catch (ExecutionException e) {
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
                     }
@@ -171,7 +179,7 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
     }
 
     private boolean changeToCandidate() {
-        if (voteFor.compareAndSet(0, selfNodeId)) {
+        if (voteFor.compareAndSet(0, selfServerInfo.getServerNodeId())) {
             onChangeStatus(Status.CANDIDATE, status);
             return true;
         }
@@ -179,6 +187,7 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
     }
 
     private void onChangeStatus(Status newStatus, Status oldStatus) {
+        System.out.println("nodeId:" + selfServerInfo.getServerNodeId() + " currentStatus = " + status + " newStatus = " + newStatus);
         if (status == oldStatus) {
             synchronized (this) {
                 if (status == oldStatus) {
@@ -200,17 +209,41 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
     }
 
     private void sendHeartBeat() {
+        for (ServerInfo serverInfo : serverInfos) {
+            HeartBeatRequestMessage message = new HeartBeatRequestMessage();
+            message.setLeaderId(selfServerInfo.getServerNodeId());
+            message.setLeaderCommit(commitIndex);
+            message.setTerm(currentTerm);
+            try {
+                rpcClient.heartBeat( serverInfo, message);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
     }
 
     @Override
     public void onSendHeartbeatCheck() {
+        System.out.println("onSendHeartbeatCheck");
+        System.out.println("nodeId:" + selfServerInfo.getServerNodeId() + "  is " + status) ;
         if (status != Status.LEADER) {
             return;
         }
         // 如果是leader的话，才发送
         for (ServerInfo serverInfo: serverInfos) {
-            rpcClient.heartBeat(serverInfo, new Object());
+            HeartBeatRequestMessage message = new HeartBeatRequestMessage();
+            message.setTerm(currentTerm);
+            message.setLeaderCommit(commitIndex);
+            message.setLeaderId(selfServerInfo.getServerNodeId());
+            try {
+                HeartBeatResponseMessage response = rpcClient.heartBeat(serverInfo, message);
+                if (response.isSuccess()) {
+
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }

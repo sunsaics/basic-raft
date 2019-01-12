@@ -28,8 +28,9 @@ public class RaftServer {
     }
 
     public void start() throws Exception {
-        rpcServer.listen(config, config.clusterServerInfos(), serverNode);
+        System.out.println("raft server start on " + config.getSelfServerInfo().getPort());
         timeEventCreator.start();
+        rpcServer.listen(config, config.clusterServerInfos(), serverNode);
     }
 
     public static void main(String[] args) {

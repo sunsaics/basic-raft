@@ -8,8 +8,9 @@ public class HeartBeatResponseMessage implements Message {
     private long term;
     private boolean success;
 
-    public void setTerm(long term) {
+    public HeartBeatResponseMessage(long term, boolean success) {
         this.term = term;
+        this.success = success;
     }
 
     public boolean isSuccess() {
@@ -20,7 +21,4 @@ public class HeartBeatResponseMessage implements Message {
         return term;
     }
 
-    public void setSuccess(boolean success) {
-        this.success = success;
-    }
 }

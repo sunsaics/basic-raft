@@ -2,16 +2,13 @@ package xyz.imcoder.raft.core.rpc.netty;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.util.CharsetUtil;
 import xyz.imcoder.raft.core.utils.Utils;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * @Author sunsai
@@ -24,11 +21,8 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     private CompletableFuture<Object> futureResponse;
 
-    private MsgType msgType;
-
-    public RpcClientHandler(MsgType msgType, Object obj) {
+    public RpcClientHandler(Object obj) {
         willSendMessage = obj;
-        this.msgType = msgType;
         futureResponse = new CompletableFuture<>();
     }
 
@@ -49,7 +43,7 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        byte[] msg = Utils.toByteArray(new RequestMsgWrapper(msgType, willSendMessage));
+        byte[] msg = Utils.toByteArray(willSendMessage);
         ctx.writeAndFlush(Unpooled.copiedBuffer(msg));
     }
 

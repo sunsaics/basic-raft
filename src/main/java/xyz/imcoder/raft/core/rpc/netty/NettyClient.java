@@ -17,31 +17,28 @@ import java.util.concurrent.Future;
  **/
 public class NettyClient {
 
-    public Future<Object> send(String host, int port, MsgType msgType, Object willSendObject) throws Exception {
-        EventLoopGroup group = new NioEventLoopGroup();     // 创建EventLooproup
-        try {
-            Bootstrap b = new Bootstrap();
-            b.group(group);// 指定EventLoopGropu以处理客户端事件，需要适用于NIO的实现
-            b.channel(NioSocketChannel.class);
-            b.remoteAddress(new InetSocketAddress(host, port));
-            //  b.option(ChannelOption.SO_BACKLOG, 1024);
-            RpcClientHandler handler = new RpcClientHandler(msgType, willSendObject);
+    private EventLoopGroup group = new NioEventLoopGroup();
 
-            b.handler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                protected void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast(handler);
-                }
-            });
+    public Future<Object> send(String host, int port, Object msg) throws Exception {
+        Bootstrap b = new Bootstrap();
+        b.group(group);// 指定EventLoopGropu以处理客户端事件，需要适用于NIO的实现
+        b.channel(NioSocketChannel.class);
+        b.remoteAddress(new InetSocketAddress(host, port));
+        //  b.option(ChannelOption.SO_BACKLOG, 1024);
+        RpcClientHandler handler = new RpcClientHandler(msg);
 
-            // 绑定端口，待待同步
-            ChannelFuture f = b.connect().sync(); // 异步绑定服务器，调用
-            // sync()方法阻塞等待直到绑定完成
-            // 等待服务器监听，端口关闭
-            f.channel().closeFuture().sync(); // sync会直到绑定操作结束为止。
-            return handler.getResponse();
-        } finally {
-            group.shutdownGracefully().sync();// 关闭EventLoopGroup，释放所有的资源
-        }
+        b.handler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addLast(handler);
+            }
+        });
+
+        // 绑定端口，待待同步
+        ChannelFuture f = b.connect().sync(); // 异步绑定服务器，调用
+        // sync()方法阻塞等待直到绑定完成
+        // 等待服务器监听，端口关闭
+        f.channel().closeFuture().sync(); // sync会直到绑定操作结束为止。
+        return handler.getResponse();
     }
 }

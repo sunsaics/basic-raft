@@ -32,18 +32,26 @@ public class RaftTimeEventCreator {
         heartBeatTimeoutCheck.schedule(new TimerTask() {
             @Override
             public void run() {
-                handler.onHeartbeatTimeoutCheck();
+                try {
+                    handler.onHeartbeatTimeoutCheck();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-        }, 100L, config.getHeartbeatTimeout());
+        }, config.getHeartbeatTimeout(), config.getHeartbeatTimeout());
 
         sendHeartBeatMessage = new Timer();
 
         sendHeartBeatMessage.schedule(new TimerTask() {
             @Override
             public void run() {
-                handler.onSendHeartbeatCheck();
+                try {
+                    handler.onSendHeartbeatCheck();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-        }, 100L, config.getHeartbeatTimeout() / 2);
+        }, config.getHeartbeatTimeout() / 3, config.getHeartbeatTimeout() / 3);
 
     }
 

@@ -8,6 +8,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import xyz.imcoder.raft.core.handler.MessageHandler;
 import xyz.imcoder.raft.core.message.HeartBeatRequestMessage;
+import xyz.imcoder.raft.core.message.VoteRequestMessage;
 import xyz.imcoder.raft.core.utils.Utils;
 
 /**
@@ -32,7 +33,6 @@ public class RpcServerHandler extends ChannelInboundHandlerAdapter {
         Object request = Utils.toObject(msgByte);
         RequestMsgWrapper requestWrapper = (RequestMsgWrapper) request;
         ctx.write(Unpooled.copiedBuffer(Utils.toByteArray(distributionMessage(requestWrapper))));
-//        ctx.write(Unpooled.copiedBuffer(Utils.toByteArray(requestWrapper)));
         ctx.flush();
     }
 
@@ -45,7 +45,9 @@ public class RpcServerHandler extends ChannelInboundHandlerAdapter {
         if (requestMsgWrapper.getMsgType() == MsgType.HEARTBEAT) {
             response = messageHandler.onHeartBeatMessage(null, (HeartBeatRequestMessage) requestMsgWrapper.getMsgRequest());
         }
-
+        if (requestMsgWrapper.getMsgType() == MsgType.VOTE) {
+            response = messageHandler.onVoteMessage(null, (VoteRequestMessage) requestMsgWrapper.getMsgRequest());
+        }
         return response;
     }
 
