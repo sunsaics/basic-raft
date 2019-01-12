@@ -3,8 +3,10 @@ package xyz.imcoder.raft.core.server;
 import xyz.imcoder.raft.core.Status;
 import xyz.imcoder.raft.core.config.ServerConfig;
 import xyz.imcoder.raft.core.handler.MessageHandler;
-import xyz.imcoder.raft.core.handler.TimeoutEventHandler;
+import xyz.imcoder.raft.core.handler.TimeEventHandler;
 import xyz.imcoder.raft.core.log.Log;
+import xyz.imcoder.raft.core.message.HeartBeatRequestMessage;
+import xyz.imcoder.raft.core.message.HeartBeatResponseMessage;
 import xyz.imcoder.raft.core.message.VoteRequestMessage;
 import xyz.imcoder.raft.core.message.VoteResponseMessage;
 import xyz.imcoder.raft.core.rpc.RpcClient;
@@ -14,12 +16,13 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * @Author sunsai
  * @Date 2019/1/8 6:03 PM
  **/
-public class ServerNode implements MessageHandler, TimeoutEventHandler {
+public class ServerNode implements MessageHandler, TimeEventHandler {
 
     private long currentTerm;
 
@@ -47,12 +50,16 @@ public class ServerNode implements MessageHandler, TimeoutEventHandler {
 
     private ServerInfo selfServerInfo;
 
-    private ServerInfo[] serverInfos;
+    private List<ServerInfo> serverInfos;
 
-    public ServerNode(ServerConfig config, RpcClient rpcClient, ServerInfo[] serverInfos) {
+    private Map<Integer, ServerInfo> clusterServerMap;
+
+    public ServerNode(ServerConfig config, RpcClient rpcClient, List<ServerInfo> clusterServerInfoList) {
         this.rpcClient = rpcClient;
         this.config = config;
-        this.serverInfos = serverInfos;
+        this.serverInfos = clusterServerInfoList;
+        clusterServerMap = serverInfos.stream().collect(Collectors.toMap(ServerInfo::getServerNodeId, x->x));
+        selfServerInfo = config.getSelfServerInfo();
     }
 
     public void start() {
@@ -95,12 +102,24 @@ public class ServerNode implements MessageHandler, TimeoutEventHandler {
     }
 
     @Override
+    public HeartBeatResponseMessage onHeartBeatMessage(ServerInfo leaderServerInfo, HeartBeatRequestMessage message) {
+        if (status == Status.CANDIDATE) {
+            onChangeStatus(Status.FOLLOWER, Status.CANDIDATE);
+        }
+
+        lastReceiveLeaderHeartbeatTime = System.currentTimeMillis();
+        HeartBeatResponseMessage response = new HeartBeatResponseMessage();
+        response.setSuccess(true);
+        response.setTerm(currentTerm);
+        return response;
+    }
+
+    @Override
     public void onHeartbeatTimeoutCheck() {
         long now = System.currentTimeMillis();
         boolean isTimeout = (now - lastReceiveLeaderHeartbeatTime) > config.getHeartbeatTimeout();
         if (isTimeout && status == Status.FOLLOWER) {
             startVote();
-
         }
     }
 
@@ -108,15 +127,15 @@ public class ServerNode implements MessageHandler, TimeoutEventHandler {
         // 选举自己
         if (changeToCandidate()) {
             int winVoteCount = 1;
-            List<Future<VoteResponseMessage>> responseFutures = new ArrayList<>(serverInfos.length);
+            List<Future<VoteResponseMessage>> responseFutures = new ArrayList<>(serverInfos.size());
             for (ServerInfo serverInfo: serverInfos) {
-                Future<VoteResponseMessage> response = rpcClient.vote(serverInfo, new VoteRequestMessage());
+                Future<VoteResponseMessage> response = rpcClient.vote(serverInfo, new VoteRequestMessage(currentTerm + 1, selfServerInfo.getServerNodeId(), 1L,1L));
                 responseFutures.add(response);
             }
-            int winMinVoteCount = (serverInfos.length + 1) / 2 + 1;
+            int winMinVoteCount = (serverInfos.size() + 1) / 2 + 1;
             long afterSendVote = System.currentTimeMillis();
 
-            Set<VoteResponseMessage> alreadVoteMessageSet = new HashSet<>();
+            Set<VoteResponseMessage> alreadyVoteMessageSet = new HashSet<>();
             while (true) {
 
                 long current = System.currentTimeMillis();
@@ -125,12 +144,13 @@ public class ServerNode implements MessageHandler, TimeoutEventHandler {
                     break;
                 }
 
+                // todo 这段代码写的不好，需要重构
                 for (Future<VoteResponseMessage> future: responseFutures) {
                     if (future.isDone()) {
                         try {
                             VoteResponseMessage msg = future.get();
-                            if (!alreadVoteMessageSet.contains(msg)) {
-                                alreadVoteMessageSet.add(msg);
+                            if (!alreadyVoteMessageSet.contains(msg)) {
+                                alreadyVoteMessageSet.add(msg);
                                 if (msg.isWimVote()) {
                                     winVoteCount = winVoteCount + 1;
                                     if (winVoteCount >= winMinVoteCount) {
@@ -159,7 +179,16 @@ public class ServerNode implements MessageHandler, TimeoutEventHandler {
     }
 
     private void onChangeStatus(Status newStatus, Status oldStatus) {
-        status = newStatus;
+        if (status == oldStatus) {
+            synchronized (this) {
+                if (status == oldStatus) {
+                    status = newStatus;
+                }
+            }
+        }
+        if (status != newStatus) {
+            return;
+        }
         if (status == Status.FOLLOWER) {
             voteFor.set(0);
         } else if (status == Status.CANDIDATE) {

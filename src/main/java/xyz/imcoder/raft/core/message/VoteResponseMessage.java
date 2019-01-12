@@ -4,7 +4,7 @@ package xyz.imcoder.raft.core.message;
  * @Author sunsai
  * @Date 2019/1/8 10:17 PM
  **/
-public class VoteResponseMessage {
+public class VoteResponseMessage implements Message {
     private long term;
     private boolean wimVote;
 

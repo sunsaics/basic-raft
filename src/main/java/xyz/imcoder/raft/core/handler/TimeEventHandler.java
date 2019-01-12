@@ -4,7 +4,7 @@ package xyz.imcoder.raft.core.handler;
  * @Author sunsai
  * @Date 2019/1/8 9:28 PM
  **/
-public interface TimeoutEventHandler {
+public interface TimeEventHandler {
 
     /**
      * follow心跳检查

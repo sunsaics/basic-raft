@@ -5,4 +5,5 @@ package xyz.imcoder.raft.core.rpc;
  * @Date 2019/1/8 9:38 PM
  **/
 public interface RpcResponse {
+    Object getResponseMessage();
 }

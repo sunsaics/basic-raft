@@ -1,5 +1,7 @@
 package xyz.imcoder.raft.core.handler;
 
+import xyz.imcoder.raft.core.message.HeartBeatRequestMessage;
+import xyz.imcoder.raft.core.message.HeartBeatResponseMessage;
 import xyz.imcoder.raft.core.message.VoteRequestMessage;
 import xyz.imcoder.raft.core.message.VoteResponseMessage;
 import xyz.imcoder.raft.core.rpc.RpcResponse;
@@ -14,4 +16,5 @@ public interface MessageHandler {
     VoteResponseMessage onVoteMessage(ServerInfo fromServerInfo, VoteRequestMessage message);
     RpcResponse onPreVoteMessage(ServerInfo fromServerInfo, Object object);
     RpcResponse onCommitMessage(ServerInfo fromServerInfo, Object message);
+    HeartBeatResponseMessage onHeartBeatMessage(ServerInfo leaderServerInfo, HeartBeatRequestMessage message);
 }

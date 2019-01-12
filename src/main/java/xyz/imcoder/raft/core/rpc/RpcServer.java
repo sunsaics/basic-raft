@@ -11,7 +11,7 @@ import java.util.List;
  * @Date 2019/1/8 6:14 PM
  **/
 public interface RpcServer {
-    Object listen(ServerConfig config, List<ServerInfo> allServerList, MessageHandler messageHandler);
+    void listen(ServerConfig config, List<ServerInfo> allServerList, MessageHandler messageHandler) throws Exception;
 
 
 }

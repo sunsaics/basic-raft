@@ -4,11 +4,18 @@ package xyz.imcoder.raft.core.message;
  * @Author sunsai
  * @Date 2019/1/8 10:15 PM
  **/
-public class VoteRequestMessage {
+public class VoteRequestMessage implements Message {
     private long term;
     private int candidateId;
     private long lastLogIndex;
     private long lastCommitTerm;
+
+    public VoteRequestMessage(long term, int candidateId, long lastLogIndex, long lastCommitTerm) {
+        this.term = term;
+        this.candidateId = candidateId;
+        this.lastLogIndex = lastLogIndex;
+        this.lastCommitTerm = lastCommitTerm;
+    }
 
     public void setTerm(long term) {
         this.term = term;
