@@ -20,8 +20,14 @@ public class NettyRpcClientTest {
 
         HeartBeatRequestMessage heartBeatRequestMessage = new HeartBeatRequestMessage();
         heartBeatRequestMessage.setTerm(1L);
-        Future<Object> response = nettyClient.send("127.0.0.1", 9091, MsgType.HEARTBEAT, heartBeatRequestMessage);
+        long start = System.currentTimeMillis();
+        Future<Object> response = nettyClient.send("127.0.0.1", 9090, MsgType.HEARTBEAT, heartBeatRequestMessage);
+        long mid = System.currentTimeMillis();
         Object res = response.get();
-        System.out.println(res);
+        long end = System.currentTimeMillis();
+        System.out.println(mid - start);
+        System.out.println(end - start);
+
+
     }
 }

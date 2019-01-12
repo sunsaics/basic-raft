@@ -11,6 +11,8 @@ import xyz.imcoder.raft.core.utils.Utils;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * @Author sunsai
  * @Date 2019/1/12 3:10 PM
@@ -48,7 +50,7 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         byte[] msg = Utils.toByteArray(new RequestMsgWrapper(msgType, willSendMessage));
-        ctx.writeAndFlush("hello");
+        ctx.writeAndFlush(Unpooled.copiedBuffer(msg));
     }
 
     /**

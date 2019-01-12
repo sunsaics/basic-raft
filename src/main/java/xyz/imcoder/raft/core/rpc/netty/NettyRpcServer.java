@@ -27,8 +27,9 @@ public class NettyRpcServer implements RpcServer {
         EventLoopGroup bossgroup = new NioEventLoopGroup();
         try{
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossgroup,bossgroup).channel(NioServerSocketChannel.class)
-                    .option(ChannelOption.SO_BACKLOG, 1024)
+            b.group(bossgroup,bossgroup)
+                    .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_BACKLOG, 102400)
                     .childHandler(new ChannelInitializer(){
                         @Override
                         protected void initChannel(Channel ch) throws Exception {

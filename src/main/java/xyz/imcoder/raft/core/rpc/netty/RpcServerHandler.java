@@ -31,7 +31,8 @@ public class RpcServerHandler extends ChannelInboundHandlerAdapter {
         in.readBytes(msgByte);
         Object request = Utils.toObject(msgByte);
         RequestMsgWrapper requestWrapper = (RequestMsgWrapper) request;
-        ctx.write(Utils.toByteArray(distributionMessage(requestWrapper)));
+        ctx.write(Unpooled.copiedBuffer(Utils.toByteArray(distributionMessage(requestWrapper))));
+//        ctx.write(Unpooled.copiedBuffer(Utils.toByteArray(requestWrapper)));
         ctx.flush();
     }
 
