@@ -335,6 +335,7 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
                 MessageWrapper responseMessageWrapper = response.get();
                 HeartBeatResponseMessage heartBeatResponseMessage = responseMessageWrapper.getContent();
                 if (heartBeatResponseMessage.isSuccess()) {
+
                     // todo
                 }
             } catch (Exception e) {
