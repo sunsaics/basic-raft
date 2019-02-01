@@ -1,9 +1,12 @@
 package xyz.imcoder.raft.core.message;
 
+import com.dslplatform.json.CompiledJson;
+
 /**
  * @Author sunsai
  * @Date 2019/1/8 10:15 PM
  **/
+@CompiledJson
 public class VoteRequestMessage implements Message {
     private long term;
     private int candidateId;

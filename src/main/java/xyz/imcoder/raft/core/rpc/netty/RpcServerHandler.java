@@ -7,9 +7,10 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import xyz.imcoder.raft.core.handler.MessageHandler;
-import xyz.imcoder.raft.core.message.HeartBeatRequestMessage;
-import xyz.imcoder.raft.core.message.VoteRequestMessage;
-import xyz.imcoder.raft.core.utils.Utils;
+import xyz.imcoder.raft.core.message.MessageWrapper;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 /**
  * @Author sunsai
@@ -30,25 +31,17 @@ public class RpcServerHandler extends ChannelInboundHandlerAdapter {
         int length = in.readableBytes();
         byte[] msgByte = new byte[length];
         in.readBytes(msgByte);
-        Object request = Utils.toObject(msgByte);
-        RequestMsgWrapper requestWrapper = (RequestMsgWrapper) request;
-        ctx.write(Unpooled.copiedBuffer(Utils.toByteArray(distributionMessage(requestWrapper))));
-        ctx.flush();
-    }
-
-    /**
-     * 分发消息
-     * @return
-     */
-    private Object distributionMessage(RequestMsgWrapper requestMsgWrapper) {
-        Object response = null;
-        if (requestMsgWrapper.getMsgType() == MsgType.HEARTBEAT) {
-            response = messageHandler.onHeartBeatMessage(null, (HeartBeatRequestMessage) requestMsgWrapper.getMsgRequest());
+        MessageWrapper messageWrapper = MessageWrapper.buildFromBytes(msgByte);
+        Future<MessageWrapper> response = messageHandler.receiveMessage(null, messageWrapper);
+        try {
+            MessageWrapper responseMessage = response.get();
+            ctx.write(Unpooled.copiedBuffer(responseMessage.getTransferContent()));
+            ctx.flush();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
         }
-        if (requestMsgWrapper.getMsgType() == MsgType.VOTE) {
-            response = messageHandler.onVoteMessage(null, (VoteRequestMessage) requestMsgWrapper.getMsgRequest());
-        }
-        return response;
     }
 
     @Override

@@ -7,6 +7,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import xyz.imcoder.raft.core.message.MessageWrapper;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Future;
@@ -19,7 +20,7 @@ public class NettyClient {
 
     private EventLoopGroup group = new NioEventLoopGroup();
 
-    public Future<Object> send(String host, int port, Object msg) throws Exception {
+    public Future<MessageWrapper> send(String host, int port, byte[] msg) throws Exception {
         Bootstrap b = new Bootstrap();
         b.group(group);// 指定EventLoopGropu以处理客户端事件，需要适用于NIO的实现
         b.channel(NioSocketChannel.class);

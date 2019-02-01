@@ -62,7 +62,6 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
         matchIndex = new ConcurrentHashMap<>();
     }
 
-    @Override
     public CopyResponseMessage onCopyMessage(ServerInfo fromServerInfo, CopyRequestMessage message) {
         HeartBeatResponseMessage heartBeatResponseMessage = onHeartBeatMessage(fromServerInfo, message);
         if (heartBeatResponseMessage.isSuccess()) {
@@ -90,23 +89,19 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
         return new CopyResponseMessage(heartBeatResponseMessage.getTerm(), heartBeatResponseMessage.isSuccess());
     }
 
-    @Override
     public VoteResponseMessage onVoteMessage(ServerInfo fromServerInfo, VoteRequestMessage voteMessage) {
         // 如果自己的选票还没有投出，则可以投票
         return new VoteResponseMessage(currentTerm, checkCanVoteFor(voteMessage));
     }
 
-    @Override
     public RpcResponse onPreVoteMessage(ServerInfo fromServerInfo, Object object) {
         return null;
     }
 
-    @Override
     public CommitResponseMessage onCommitMessage(ServerInfo fromServerInfo, CommitRequestMessage message) {
         return null;
     }
 
-    @Override
     public HeartBeatResponseMessage onHeartBeatMessage(ServerInfo leaderServerInfo, HeartBeatRequestMessage message) {
         System.out.println("onHeartBeatMessage");
         if (status == Status.CANDIDATE) {
@@ -138,6 +133,10 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
         return new HeartBeatResponseMessage(currentTerm, isSuccess);
     }
 
+    @Override
+    public Future<MessageWrapper> receiveMessage(ServerInfo serverInfo, MessageWrapper messageWrapper) {
+        return null;
+    }
 
 
     @Override
@@ -244,11 +243,12 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
         if (changeToCandidate()) {
             int winVoteCount = 1;
             currentTerm ++;
-            List<Future<Object>> responseFutures = new ArrayList<>(serverInfos.size());
+            List<Future<MessageWrapper>> responseFutures = new ArrayList<>(serverInfos.size());
             for (ServerInfo serverInfo: serverInfos) {
-                Future<Object> response = null;
+                Future<MessageWrapper> response = null;
                 try {
-                    response = rpcClient.vote(serverInfo, new VoteRequestMessage(currentTerm, selfServerInfo.getServerNodeId(), 1L,1L));
+                    VoteRequestMessage voteRequestMessage = new VoteRequestMessage(currentTerm, selfServerInfo.getServerNodeId(), 1L,1L);
+                    response = rpcClient.sendMessage(serverInfo, new MessageWrapper(MessageType.VOTE_REQUEST, voteRequestMessage));
                     responseFutures.add(response);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -270,10 +270,11 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
                     break;
                 }
                 // todo 这段代码写的不好，需要重构
-                for (Future<Object> future: responseFutures) {
+                for (Future<MessageWrapper> future: responseFutures) {
                     if (future.isDone()) {
                         try {
-                            VoteResponseMessage msg = (VoteResponseMessage) future.get();
+                            MessageWrapper messageWrapper = future.get();
+                            VoteResponseMessage msg = messageWrapper.getContent();
                             if (!alreadyVoteMessageSet.contains(msg)) {
                                 alreadyVoteMessageSet.add(msg);
                                 if (msg.isWimVote()) {
@@ -330,9 +331,11 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
             message.setLeaderCommit(commitIndex.get());
             message.setLeaderId(selfServerInfo.getServerNodeId());
             try {
-                HeartBeatResponseMessage response = rpcClient.heartBeat(serverInfo, message);
-                if (response.isSuccess()) {
-
+                Future<MessageWrapper> response = rpcClient.sendMessage(serverInfo, new MessageWrapper(MessageType.HEARTBEAT_REQUEST, message));
+                MessageWrapper responseMessageWrapper = response.get();
+                HeartBeatResponseMessage heartBeatResponseMessage = responseMessageWrapper.getContent();
+                if (heartBeatResponseMessage.isSuccess()) {
+                    // todo
                 }
             } catch (Exception e) {
                 e.printStackTrace();

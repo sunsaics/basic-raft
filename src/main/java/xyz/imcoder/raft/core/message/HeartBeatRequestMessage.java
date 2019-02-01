@@ -1,9 +1,12 @@
 package xyz.imcoder.raft.core.message;
 
+import com.dslplatform.json.CompiledJson;
+
 /**
  * @Author sunsai
  * @Date 2019/1/12 2:03 PM
  **/
+@CompiledJson
 public class HeartBeatRequestMessage implements Message {
     private long term;
     private int leaderId;

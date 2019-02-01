@@ -1,5 +1,9 @@
 package xyz.imcoder.raft.core.utils;
 
+import com.dslplatform.json.DslJson;
+import com.dslplatform.json.JsonWriter;
+import com.dslplatform.json.runtime.Settings;
+
 import java.io.*;
 
 /**
@@ -8,20 +12,16 @@ import java.io.*;
  **/
 public class Utils {
 
+    private static final DslJson<Object> dslJson = new DslJson<>(Settings.withRuntime().allowArrayFormat(true).includeServiceLoader());
+
     public static byte[] toByteArray (Object obj) {
-        byte[] bytes = null;
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        JsonWriter writer = dslJson.newWriter();
         try {
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            oos.writeObject(obj);
-            oos.flush();
-            bytes = bos.toByteArray ();
-            oos.close();
-            bos.close();
-        } catch (IOException ex) {
-            ex.printStackTrace();
+            dslJson.serialize(writer, obj);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return bytes;
+        return writer.toByteArray();
     }
 
     /**
@@ -43,6 +43,27 @@ public class Utils {
             ex.printStackTrace();
         }
         return obj;
+    }
+
+    public static <T> T toObject(byte[] bytes, Class<T> tClass) {
+        T result = null;
+        try {
+            result = dslJson.deserialize(tClass, bytes, bytes.length);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    public static byte[] concat(byte[] first, byte[] second) {
+        byte [] result = new byte[first.length + second.length];
+        for (int i = 0; i < first.length; i++) {
+            result[i] = first[i];
+        }
+        for (int i = 0; i < second.length; i++) {
+            result[i + first.length] = second[i];
+        }
+        return result;
     }
 
 }

@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import xyz.imcoder.raft.core.message.MessageWrapper;
 import xyz.imcoder.raft.core.utils.Utils;
 
 import java.util.concurrent.CompletableFuture;
@@ -17,16 +18,16 @@ import java.util.concurrent.Future;
 public class RpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
 
-    private Object willSendMessage;
+    private byte[] willSendMessage;
 
-    private CompletableFuture<Object> futureResponse;
+    private CompletableFuture<MessageWrapper> futureResponse;
 
-    public RpcClientHandler(Object obj) {
+    public RpcClientHandler(byte[] obj) {
         willSendMessage = obj;
         futureResponse = new CompletableFuture<>();
     }
 
-    public Future<Object> getResponse() {
+    public Future<MessageWrapper> getResponse() {
         return futureResponse;
     }
 
@@ -38,12 +39,12 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
         int length = in.readableBytes();
         byte[] response = new byte[length];
         in.readBytes(response);
-        futureResponse.complete(Utils.toObject(response));
+        futureResponse.complete(MessageWrapper.buildFromBytes(response));
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        byte[] msg = Utils.toByteArray(willSendMessage);
+        byte[] msg = willSendMessage;
         ctx.writeAndFlush(Unpooled.copiedBuffer(msg));
     }
 

@@ -21,6 +21,12 @@
             <artifactId>netty-all</artifactId>
             <version>4.1.32.Final</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.dslplatform/dsl-json -->
+        <dependency>
+            <groupId>com.dslplatform</groupId>
+            <artifactId>dsl-json-java8</artifactId>
+            <version>1.8.5</version>
+        </dependency>
     </dependencies>
 
     <build>
