@@ -1,4 +1,4 @@
-package xyz.imcoder.raft.core.server;
+package xyz.imcoder.raft.core.config;
 
 /**
  * @Author sunsai

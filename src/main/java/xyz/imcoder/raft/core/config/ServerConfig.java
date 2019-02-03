@@ -1,7 +1,5 @@
 package xyz.imcoder.raft.core.config;
 
-import xyz.imcoder.raft.core.server.ServerInfo;
-
 import java.util.ArrayList;
 import java.util.List;
 

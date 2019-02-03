@@ -2,6 +2,7 @@ package xyz.imcoder.raft.core.server;
 
 import xyz.imcoder.raft.core.Status;
 import xyz.imcoder.raft.core.config.ServerConfig;
+import xyz.imcoder.raft.core.config.ServerInfo;
 import xyz.imcoder.raft.core.handler.MessageHandler;
 import xyz.imcoder.raft.core.handler.TimeEventHandler;
 import xyz.imcoder.raft.core.log.Log;
@@ -10,10 +11,13 @@ import xyz.imcoder.raft.core.rpc.RpcClient;
 import xyz.imcoder.raft.core.rpc.RpcResponse;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +56,8 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
 
     private long _zeroIndexOffset = 0;
 
+    private Lock lock = new ReentrantLock();
+
     public ServerNode(ServerConfig config, RpcClient rpcClient, List<ServerInfo> clusterServerInfoList) {
         this.rpcClient = rpcClient;
         this.config = config;
@@ -62,7 +68,63 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
         matchIndex = new ConcurrentHashMap<>();
     }
 
-    public CopyResponseMessage onCopyMessage(ServerInfo fromServerInfo, CopyRequestMessage message) {
+
+    @Override
+    public Future<MessageWrapper> receiveMessage(ServerInfo serverInfo, MessageWrapper messageWrapper) {
+        lock.lock();
+        try {
+            MessageWrapper result = null;
+            switch (messageWrapper.getMessageType()) {
+                case COPY_REQUEST:
+                    break;
+                case VOTE_REQUEST:
+                    VoteResponseMessage voteResponseMessage = onVoteMessage(serverInfo, messageWrapper.getContent());
+                    result = new MessageWrapper(MessageType.VOTE_RESPONSE, voteResponseMessage);
+                    break;
+                case COMMIT_REQUEST:
+                    break;
+                case HEARTBEAT_REQUEST:
+                    HeartBeatResponseMessage response = onHeartBeatMessage(serverInfo, messageWrapper.getContent());
+                    result = new MessageWrapper(MessageType.UNKNOWN.HEARTBEAT_RESPONSE, response);
+                    break;
+            }
+            return CompletableFuture.completedFuture(result);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
+    @Override
+    public void onHeartbeatTimeoutCheckEvent() {
+        System.out.println("onHeartbeatTimeoutCheck");
+        long now = System.currentTimeMillis();
+        boolean isTimeout = (now - lastReceiveLeaderHeartbeatTime) > config.getHeartbeatTimeout();
+        if (isTimeout && status == Status.FOLLOWER) {
+            Random random = new Random();
+            try {
+                Thread.sleep(random.nextInt(150) + 150);
+                startVote();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    @Override
+    public void onSendHeartbeatCheckEvent() {
+        System.out.println("onSendHeartbeatCheck");
+        System.out.println("nodeId:" + selfServerInfo.getServerNodeId() + "  is " + status) ;
+        if (status != Status.LEADER) {
+            return;
+        }
+        // 如果是leader的话，才发送
+        sendHeartBeatMessage();
+    }
+
+
+    private CopyResponseMessage onCopyMessage(ServerInfo fromServerInfo, CopyRequestMessage message) {
         HeartBeatResponseMessage heartBeatResponseMessage = onHeartBeatMessage(fromServerInfo, message);
         if (heartBeatResponseMessage.isSuccess()) {
             long newMinIndex = Long.MAX_VALUE;
@@ -89,20 +151,22 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
         return new CopyResponseMessage(heartBeatResponseMessage.getTerm(), heartBeatResponseMessage.isSuccess());
     }
 
-    public VoteResponseMessage onVoteMessage(ServerInfo fromServerInfo, VoteRequestMessage voteMessage) {
+    private VoteResponseMessage onVoteMessage(ServerInfo fromServerInfo, VoteRequestMessage voteMessage) {
         // 如果自己的选票还没有投出，则可以投票
         return new VoteResponseMessage(currentTerm, checkCanVoteFor(voteMessage));
     }
 
-    public RpcResponse onPreVoteMessage(ServerInfo fromServerInfo, Object object) {
+    private RpcResponse onPreVoteMessage(ServerInfo fromServerInfo, Object object) {
+        // todo
         return null;
     }
 
-    public CommitResponseMessage onCommitMessage(ServerInfo fromServerInfo, CommitRequestMessage message) {
+    private CommitResponseMessage onCommitMessage(ServerInfo fromServerInfo, CommitRequestMessage message) {
+        // todo
         return null;
     }
 
-    public HeartBeatResponseMessage onHeartBeatMessage(ServerInfo leaderServerInfo, HeartBeatRequestMessage message) {
+    private HeartBeatResponseMessage onHeartBeatMessage(ServerInfo leaderServerInfo, HeartBeatRequestMessage message) {
         System.out.println("onHeartBeatMessage");
         if (status == Status.CANDIDATE) {
             onChangeStatus(Status.FOLLOWER, Status.CANDIDATE);
@@ -131,40 +195,6 @@ public class ServerNode implements MessageHandler, TimeEventHandler {
 
         lastReceiveLeaderHeartbeatTime = System.currentTimeMillis();
         return new HeartBeatResponseMessage(currentTerm, isSuccess);
-    }
-
-    @Override
-    public Future<MessageWrapper> receiveMessage(ServerInfo serverInfo, MessageWrapper messageWrapper) {
-        return null;
-    }
-
-
-    @Override
-    public void onHeartbeatTimeoutCheck() {
-        System.out.println("onHeartbeatTimeoutCheck");
-        long now = System.currentTimeMillis();
-        boolean isTimeout = (now - lastReceiveLeaderHeartbeatTime) > config.getHeartbeatTimeout();
-        if (isTimeout && status == Status.FOLLOWER) {
-            Random random = new Random();
-            try {
-                Thread.sleep(random.nextInt(150) + 150);
-                startVote();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-
-    @Override
-    public void onSendHeartbeatCheck() {
-        System.out.println("onSendHeartbeatCheck");
-        System.out.println("nodeId:" + selfServerInfo.getServerNodeId() + "  is " + status) ;
-        if (status != Status.LEADER) {
-            return;
-        }
-        // 如果是leader的话，才发送
-        sendHeartBeatMessage();
     }
 
     private void setLog(long index, Log log) {

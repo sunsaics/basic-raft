@@ -1,6 +1,6 @@
 package xyz.imcoder.raft.core.test;
 
-import xyz.imcoder.raft.core.RaftTimeEventCreator;
+import xyz.imcoder.raft.core.RaftTimeEventGenerator;
 import xyz.imcoder.raft.core.config.ServerConfig;
 import xyz.imcoder.raft.core.server.ServerNode;
 
@@ -19,7 +19,7 @@ public class TimeEventCreatorTest {
         config.setClusterHosts("127.0.0.1:9092@2,127.0.0.1:9093@3");
 
 
-        RaftTimeEventCreator timeEventCreator = new RaftTimeEventCreator(config, new ServerNode(config, null, new ArrayList<>()));
+        RaftTimeEventGenerator timeEventCreator = new RaftTimeEventGenerator(config, new ServerNode(config, null, new ArrayList<>()));
         timeEventCreator.start();
     }
 }

@@ -8,7 +8,4 @@ public enum Status {
     LEADER,
     FOLLOWER,
     CANDIDATE
-
-
-
 }

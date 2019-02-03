@@ -1,10 +1,5 @@
 package xyz.imcoder.raft.core.test;
 
-import xyz.imcoder.raft.core.message.HeartBeatRequestMessage;
-import xyz.imcoder.raft.core.rpc.netty.MsgType;
-import xyz.imcoder.raft.core.rpc.netty.NettyClient;
-
-import java.util.concurrent.Future;
 
 /**
  * @Author sunsai

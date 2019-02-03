@@ -9,10 +9,10 @@ public interface TimeEventHandler {
     /**
      * follow心跳检查
      */
-    void onHeartbeatTimeoutCheck();
+    void onHeartbeatTimeoutCheckEvent();
 
     /**
      * leader发送heartbeat
      */
-    void onSendHeartbeatCheck();
+    void onSendHeartbeatCheckEvent();
 }

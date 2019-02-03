@@ -7,7 +7,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import xyz.imcoder.raft.core.config.ServerConfig;
 import xyz.imcoder.raft.core.handler.MessageHandler;
 import xyz.imcoder.raft.core.rpc.RpcServer;
-import xyz.imcoder.raft.core.server.ServerInfo;
+import xyz.imcoder.raft.core.config.ServerInfo;
 
 import java.util.List;
 

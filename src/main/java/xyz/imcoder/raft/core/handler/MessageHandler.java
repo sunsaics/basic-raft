@@ -1,8 +1,7 @@
 package xyz.imcoder.raft.core.handler;
 
 import xyz.imcoder.raft.core.message.*;
-import xyz.imcoder.raft.core.rpc.RpcResponse;
-import xyz.imcoder.raft.core.server.ServerInfo;
+import xyz.imcoder.raft.core.config.ServerInfo;
 
 import java.util.concurrent.Future;
 

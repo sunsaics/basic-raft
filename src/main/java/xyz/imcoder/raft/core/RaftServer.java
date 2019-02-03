@@ -17,14 +17,14 @@ public class RaftServer {
     private RpcClient rpcClient;
     private RpcServer rpcServer;
     private ServerNode serverNode;
-    private RaftTimeEventCreator timeEventCreator;
+    private RaftTimeEventGenerator timeEventCreator;
 
     public RaftServer(ServerConfig config, RpcClient rpcClient, RpcServer rpcServer) {
         this.config = config;
         this.rpcClient = rpcClient;
         this.rpcServer = rpcServer;
         serverNode = new ServerNode(config, rpcClient, config.clusterServerInfos());
-        timeEventCreator = new RaftTimeEventCreator(config, serverNode);
+        timeEventCreator = new RaftTimeEventGenerator(config, serverNode);
     }
 
     public void start() throws Exception {

@@ -1,5 +1,6 @@
 package xyz.imcoder.raft.core.message;
 
+import xyz.imcoder.raft.core.RaftException;
 import xyz.imcoder.raft.core.utils.Utils;
 
 import java.nio.ByteBuffer;
@@ -7,7 +8,7 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * @Author sunsai
+ * @Author redocmi
  * @Date 2019/2/1 5:32 PM
  **/
 public class MessageWrapper {
@@ -43,19 +44,37 @@ public class MessageWrapper {
         byte[] msgContent = Arrays.copyOfRange(byteContent, 4, byteContent.length);
         int msgTypeValue = ByteBuffer.wrap(msgType).getInt();
         MessageType messageType = MessageType.valueOf(msgTypeValue);
-        MessageWrapper result = null;
+        Class clazz = null;
         switch (messageType) {
             case VOTE_REQUEST:
-                result = new MessageWrapper(messageType, Utils.toObject(msgContent, VoteRequestMessage.class));
+                clazz = VoteRequestMessage.class;
                 break;
             case VOTE_RESPONSE:
-                result = new MessageWrapper(messageType, Utils.toObject(msgContent, VoteResponseMessage.class));
+                clazz = VoteResponseMessage.class;
                 break;
+            case COPY_REQUEST:
+                clazz = CopyRequestMessage.class;
+                break;
+            case COPY_RESPONSE:
+                clazz = CopyResponseMessage.class;
+                break;
+            case COMMIT_REQUEST:
+                clazz = CommitRequestMessage.class;
+                break;
+            case COMMIT_RESPONSE:
+                clazz = CommitResponseMessage.class;
+                break;
+            case HEARTBEAT_REQUEST:
+                clazz = HeartBeatRequestMessage.class;
+                break;
+            case HEARTBEAT_RESPONSE:
+                clazz = HeartBeatResponseMessage.class;
+                break;
+            case UNKNOWN:
             default:
-                result = new MessageWrapper(MessageType.UNKNOWN, null);
-                break;
+                throw new RaftException("非法的消息类型" + messageType);
         }
-        return result;
+        return new MessageWrapper(messageType, Utils.toObject(msgContent, clazz));
     }
 
 }

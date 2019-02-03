@@ -8,10 +8,11 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * @Author sunsai
+ * raft时间事件生成器
+ * @Author redocmi
  * @Date 2019/1/12 2:59 PM
  **/
-public class RaftTimeEventCreator {
+public class RaftTimeEventGenerator {
 
 
 
@@ -22,7 +23,7 @@ public class RaftTimeEventCreator {
 
     private Timer sendHeartBeatMessage;
 
-    public RaftTimeEventCreator(ServerConfig config, TimeEventHandler handler) {
+    public RaftTimeEventGenerator(ServerConfig config, TimeEventHandler handler) {
         this.config = config;
         this.handler = handler;
     }
@@ -33,7 +34,7 @@ public class RaftTimeEventCreator {
             @Override
             public void run() {
                 try {
-                    handler.onHeartbeatTimeoutCheck();
+                    handler.onHeartbeatTimeoutCheckEvent();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -46,7 +47,7 @@ public class RaftTimeEventCreator {
             @Override
             public void run() {
                 try {
-                    handler.onSendHeartbeatCheck();
+                    handler.onSendHeartbeatCheckEvent();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

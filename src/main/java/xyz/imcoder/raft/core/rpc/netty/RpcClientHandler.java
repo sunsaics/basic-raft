@@ -5,7 +5,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import xyz.imcoder.raft.core.message.MessageWrapper;
-import xyz.imcoder.raft.core.utils.Utils;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
